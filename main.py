@@ -1,7 +1,11 @@
-import tkinter as tk
+import sys
+from PySide6.QtWidgets import QApplication
 from src.gui import LanzadorApp
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = LanzadorApp(root)
-    root.mainloop()
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+
+    ventana = LanzadorApp()
+    ventana.show()
+    sys.exit(app.exec())
