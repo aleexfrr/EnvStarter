@@ -1,2 +1,2 @@
 PyInstaller
-PySide6
+PyQt6
