@@ -4,16 +4,8 @@ import subprocess
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
-    QCheckBox,
-    QDialog,
-    QGroupBox,
-    QHBoxLayout,
-    QMainWindow,
-    QMessageBox,
-    QPushButton,
-    QToolBar,
-    QVBoxLayout,
-    QWidget,
+    QCheckBox, QDialog, QGroupBox, QHBoxLayout, QMainWindow,
+    QMessageBox, QPushButton, QToolBar, QVBoxLayout, QWidget,
 )
 from src.config_manager import cargar_apps, eliminar_app
 from src.dialog import DialogoAgregarApp
@@ -51,22 +43,36 @@ class LanzadorApp(QMainWindow):
         toolbar.setMovable(False)
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar)
 
+        contenido_toolbar = QWidget(toolbar)
+        layout_toolbar = QHBoxLayout(contenido_toolbar)
+        layout_toolbar.setContentsMargins(0, 8, 0, 0)
+        layout_toolbar.setSpacing(6)
+
+        margen_toolbar_izquierdo = QWidget(contenido_toolbar)
+        margen_toolbar_izquierdo.setFixedWidth(15)
+        layout_toolbar.addWidget(margen_toolbar_izquierdo)
+
         btn_agregar = QPushButton(" ➕ Añadir ", self)
         btn_agregar.setStyleSheet(
             "font-size: 9pt; padding: 4px; border: 1px solid #c0c0c0; border-radius: 4px;"
         )
         btn_agregar.clicked.connect(self.abrir_dialogo_agregar)
-        toolbar.addWidget(btn_agregar)
+        layout_toolbar.addWidget(btn_agregar)
 
         btn_borrar = QPushButton(" ➖ Borrar ", self)
         btn_borrar.setStyleSheet(
             "font-size: 9pt; padding: 4px; border: 1px solid #c0c0c0; border-radius: 4px; color: #d9534f;"
         )
         btn_borrar.clicked.connect(self.borrar_app_seleccionada)
-        toolbar.addWidget(btn_borrar)
+        layout_toolbar.addWidget(btn_borrar)
+
+        margen_toolbar_derecho = QWidget(contenido_toolbar)
+        margen_toolbar_derecho.setFixedWidth(15)
+        layout_toolbar.addWidget(margen_toolbar_derecho)
+        toolbar.addWidget(contenido_toolbar)
 
         toolbar.setStyleSheet(
-            "QToolBar { spacing: 6px; padding: 5px; background: transparent; border: none; }"
+            "QToolBar { background: transparent; border: none; }"
         )
 
         central_widget = QWidget(self)
@@ -76,7 +82,7 @@ class LanzadorApp(QMainWindow):
         self.layout_principal.setContentsMargins(20, 10, 20, 20)
         self.layout_principal.setSpacing(12)
 
-        # --- CONTENEDOR DE APLICACIONES (Checkboxes tradicionales) ---
+        # --- CONTENEDOR DE APLICACIONES ---
         self.group_box = QGroupBox("Aplicaciones del Entorno de Trabajo")
         self.layout_group = QVBoxLayout(self.group_box)
         self.layout_group.setSpacing(8)
