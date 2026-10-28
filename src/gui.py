@@ -63,7 +63,7 @@ class LanzadorApp(QMainWindow):
         btn_borrar.setStyleSheet(
             "font-size: 9pt; padding: 4px; border: 1px solid #c0c0c0; border-radius: 4px; color: #d9534f;"
         )
-        btn_borrar.clicked.connect(self.borrar_app_seleccionada)
+        btn_borrar.clicked.connect(self.borrar_apps_seleccionada)
         layout_toolbar.addWidget(btn_borrar)
 
         margen_toolbar_derecho = QWidget(contenido_toolbar)
@@ -146,7 +146,7 @@ class LanzadorApp(QMainWindow):
                 "Aplicación añadida correctamente al archivo .ini",
             )
 
-    def borrar_app_seleccionada(self):
+    def borrar_apps_seleccionada(self):
         # Ver qué aplicaciones tienen el tick marcado
         apps_marcadas = [
             name for name, chk in self.vars_apps.items() if chk.isChecked()
@@ -156,33 +156,34 @@ class LanzadorApp(QMainWindow):
             QMessageBox.warning(
                 self,
                 "Atención",
-                "Marca con el tick la aplicación que deseas borrar.",
+                "Marca con el tick al menos una aplicación que deseas borrar.",
             )
             return
 
-        if len(apps_marcadas) > 1:
-            QMessageBox.warning(
-                self,
-                "Atención",
-                "Por favor, marca únicamente la aplicación que deseas borrar.",
-            )
-            return
+        # Crear una lista formateada con viñetas para el mensaje de confirmación
+        lista_texto = "\n".join([f"• {app}" for app in apps_marcadas])
 
-        app_name = apps_marcadas[0]
+        mensaje = (
+            f"¿Estás seguro de que deseas eliminar las siguientes "
+            f"{len(apps_marcadas)} aplicaciones?\n\n{lista_texto}"
+        )
+
         confirm = QMessageBox.question(
             self,
             "Confirmar eliminación",
-            f"¿Estás seguro de que deseas eliminar '{app_name}'?",
+            mensaje,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
         if confirm == QMessageBox.StandardButton.Yes:
-            eliminar_app(app_name)
+            for app_name in apps_marcadas:
+                eliminar_app(app_name)
+            
             self.cargar_lista_apps()
             QMessageBox.information(
                 self,
                 "Éxito",
-                f"'{app_name}' ha sido eliminada correctamente.",
+                "Las aplicaciones seleccionadas han sido eliminadas correctamente.",
             )
 
     def seleccionar_todo(self):
