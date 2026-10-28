@@ -1,22 +1,20 @@
 from PyQt6.QtWidgets import (
-    QDialog,
-    QFileDialog,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMessageBox,
-    QPushButton,
-    QVBoxLayout,
+    QDialog, QFileDialog, QHBoxLayout, QLabel,
+    QLineEdit, QMessageBox, QPushButton, QVBoxLayout,
 )
-from src.config_manager import guardar_nueva_app
+from src.config_manager import guardar_nueva_app, editar_app
 
 
-class DialogoAgregarApp(QDialog):
-    """Ventana flotante para añadir una nueva aplicación al .ini"""
+class ConfigDialog(QDialog):
+    """Ventana flotante para añadir o editar una aplicación"""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, nombre_inicial="", comando_inicial=""):
         super().__init__(parent)
-        self.setWindowTitle("Añadir Nueva Aplicación")
+        self.es_edicion = bool(nombre_inicial)
+        self.nombre_antiguo = nombre_inicial
+
+        titulo = "Editar Aplicación" if self.es_edicion else "Añadir Nueva Aplicación"
+        self.setWindowTitle(titulo)
         self.setFixedSize(380, 220)
         self.setModal(True)
 
@@ -26,6 +24,7 @@ class DialogoAgregarApp(QDialog):
         # Nombre de la app
         layout.addWidget(QLabel("Nombre de la aplicación:"))
         self.input_nombre = QLineEdit(self)
+        self.input_nombre.setText(nombre_inicial)
         self.input_nombre.setPlaceholderText("Ej: Postman, Notion...")
         layout.addWidget(self.input_nombre)
 
@@ -33,6 +32,7 @@ class DialogoAgregarApp(QDialog):
         layout.addWidget(QLabel("Ruta del ejecutable o comando:"))
         layout_ruta = QHBoxLayout()
         self.input_ruta = QLineEdit(self)
+        self.input_ruta.setText(comando_inicial)
         self.input_ruta.setPlaceholderText("Ej: code o C:\\Ruta\\app.exe")
         layout_ruta.addWidget(self.input_ruta)
 
@@ -74,5 +74,9 @@ class DialogoAgregarApp(QDialog):
             )
             return
 
-        guardar_nueva_app(nombre, comando)
+        if self.es_edicion:
+            editar_app(self.nombre_antiguo, nombre, comando)
+        else:
+            guardar_nueva_app(nombre, comando)
+
         self.accept()
