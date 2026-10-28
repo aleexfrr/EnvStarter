@@ -34,6 +34,9 @@ MANIFEST
 *.manifest
 *.spec
 
+# Config
+*.ini
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
@@ -84,19 +87,6 @@ target/
 # IPython
 profile_default/
 ipython_config.py
-
-# pyenv
-# .python-version
-
-# pipenv
-# Pipfile.lock
-
-# uv
-# uv.lock
-
-# poetry
-# poetry.lock
-# poetry.toml
 
 # pdm
 # pdm.lock

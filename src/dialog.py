@@ -1,0 +1,78 @@
+from PyQt6.QtWidgets import (
+    QDialog,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
+from src.config_manager import guardar_nueva_app
+
+
+class DialogoAgregarApp(QDialog):
+    """Ventana flotante para añadir una nueva aplicación al .ini"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Añadir Nueva Aplicación")
+        self.setFixedSize(380, 220)
+        self.setModal(True)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+
+        # Nombre de la app
+        layout.addWidget(QLabel("Nombre de la aplicación:"))
+        self.input_nombre = QLineEdit(self)
+        self.input_nombre.setPlaceholderText("Ej: Postman, Notion...")
+        layout.addWidget(self.input_nombre)
+
+        # Ruta o comando
+        layout.addWidget(QLabel("Ruta del ejecutable o comando:"))
+        layout_ruta = QHBoxLayout()
+        self.input_ruta = QLineEdit(self)
+        self.input_ruta.setPlaceholderText("Ej: code o C:\\Ruta\\app.exe")
+        layout_ruta.addWidget(self.input_ruta)
+
+        btn_examinar = QPushButton("...", self)
+        btn_examinar.setFixedWidth(40)
+        btn_examinar.clicked.connect(self.explorar_archivo)
+        layout_ruta.addWidget(btn_examinar)
+        layout.addLayout(layout_ruta)
+
+        # Botones Guardar / Cancelar
+        layout_botones = QHBoxLayout()
+        btn_guardar = QPushButton("Guardar", self)
+        btn_guardar.setStyleSheet(
+            "background-color: #0078D4; color: white; font-weight: bold; padding: 6px;"
+        )
+        btn_guardar.clicked.connect(self.validar_y_guardar)
+
+        btn_cancelar = QPushButton("Cancelar", self)
+        btn_cancelar.clicked.connect(self.reject)
+
+        layout_botones.addWidget(btn_cancelar)
+        layout_botones.addWidget(btn_guardar)
+        layout.addLayout(layout_botones)
+
+    def explorar_archivo(self):
+        archivo, _ = QFileDialog.getOpenFileName(
+            self, "Seleccionar Ejecutable", "", "Ejecutables (*.exe);- Todos (*.*)"
+        )
+        if archivo:
+            self.input_ruta.setText(archivo)
+
+    def validar_y_guardar(self):
+        nombre = self.input_nombre.text().strip()
+        comando = self.input_ruta.text().strip()
+
+        if not nombre or not comando:
+            QMessageBox.warning(
+                self, "Aviso", "Rellena todos los campos obligatorios."
+            )
+            return
+
+        guardar_nueva_app(nombre, comando)
+        self.accept()
