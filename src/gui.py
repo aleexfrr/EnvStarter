@@ -1,14 +1,14 @@
 import os
 import sys
 import subprocess
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QCheckBox, QDialog, QGroupBox, QHBoxLayout, QMainWindow,
     QMessageBox, QPushButton, QToolBar, QVBoxLayout, QWidget,
 )
 from src.config_manager import cargar_apps, eliminar_app
-from src.dialog import DialogoAgregarApp
+from src.dialog import ConfigDialog
 
 
 class LanzadorApp(QMainWindow):
@@ -38,7 +38,7 @@ class LanzadorApp(QMainWindow):
         return os.path.join(base_path, "assets", "icon.ico")
 
     def _crear_interfaz(self):
-        # Barra superior con botones para añadir y borrar apps
+        # Barra superior con botones para añadir, borrar y editar apps
         toolbar = QToolBar("Barra Superior", self)
         toolbar.setMovable(False)
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar)
@@ -52,6 +52,7 @@ class LanzadorApp(QMainWindow):
         margen_toolbar_izquierdo.setFixedWidth(15)
         layout_toolbar.addWidget(margen_toolbar_izquierdo)
 
+        # Botón Añadir
         btn_agregar = QPushButton(" ➕ Añadir ", self)
         btn_agregar.setStyleSheet(
             "font-size: 9pt; padding: 4px; border: 1px solid #c0c0c0; border-radius: 4px;"
@@ -59,9 +60,18 @@ class LanzadorApp(QMainWindow):
         btn_agregar.clicked.connect(self.abrir_dialogo_agregar)
         layout_toolbar.addWidget(btn_agregar)
 
-        btn_borrar = QPushButton(" ➖ Borrar ", self)
+        # Botón Editar
+        btn_editar = QPushButton(" ✏️ Editar ", self)
+        btn_editar.setStyleSheet(
+            "font-size: 9pt; padding: 4px; border: 1px solid #c0c0c0; border-radius: 4px;"
+        )
+        btn_editar.clicked.connect(self.abrir_dialogo_editar)
+        layout_toolbar.addWidget(btn_editar)
+
+        # Botón Borrar
+        btn_borrar = QPushButton(" 🗑️ Borrar ", self)
         btn_borrar.setStyleSheet(
-            "font-size: 9pt; padding: 4px; border: 1px solid #c0c0c0; border-radius: 4px; color: #d9534f;"
+            "font-size: 9pt; padding: 4px; border: 1px solid #c0c0c0; border-radius: 4px; color: #e84545;"
         )
         btn_borrar.clicked.connect(self.borrar_apps_seleccionada)
         layout_toolbar.addWidget(btn_borrar)
@@ -137,13 +147,44 @@ class LanzadorApp(QMainWindow):
             self.vars_apps[app_name] = chk
 
     def abrir_dialogo_agregar(self):
-        dialogo = DialogoAgregarApp(self)
+        dialogo = ConfigDialog(self)
         if dialogo.exec() == QDialog.DialogCode.Accepted:
             self.cargar_lista_apps()
             QMessageBox.information(
                 self,
                 "Éxito",
                 "Aplicación añadida correctamente al archivo .ini",
+            )
+
+    def abrir_dialogo_editar(self):
+        # Validar que haya exactamente una app seleccionada con el tick
+        apps_marcadas = [
+            name for name, chk in self.vars_apps.items() if chk.isChecked()
+        ]
+
+        if not apps_marcadas:
+            QMessageBox.warning(
+                self, "Atención", "Marca con el tick la aplicación que deseas editar."
+            )
+            return
+
+        if len(apps_marcadas) > 1:
+            QMessageBox.warning(
+                self, "Atención", "Por favor, marca únicamente una aplicación para editar."
+            )
+            return
+
+        app_name = apps_marcadas[0]
+        comando_actual = self.apps_dict[app_name]
+
+        # Abrir diálogo pasando los datos actuales
+        dialogo = ConfigDialog(self, nombre_inicial=app_name, comando_inicial=comando_actual)
+        if dialogo.exec() == QDialog.DialogCode.Accepted:
+            self.cargar_lista_apps()
+            QMessageBox.information(
+                self,
+                "Éxito",
+                "Aplicación actualizada correctamente.",
             )
 
     def borrar_apps_seleccionada(self):
@@ -195,23 +236,39 @@ class LanzadorApp(QMainWindow):
             chk.setChecked(False)
 
     def lanzar_apps(self):
-        lanzadas = 0
-        for app_name, chk in self.vars_apps.items():
-            if chk.isChecked():
-                lanzadas += 1
-                config_comando = self.apps_dict[app_name]
-                try:
-                    subprocess.Popen(config_comando, shell=True)
-                except Exception as e:
-                    QMessageBox.critical(
-                        self, "Error", f"No se pudo iniciar {app_name}:\n{e}"
-                    )
+        # Recopilar apps marcadas
+        self.apps_a_lanzar = [
+            (name, self.apps_dict[name])
+            for name, chk in self.vars_apps.items() if chk.isChecked()
+        ]
 
-        if lanzadas > 0:
-            self.close()
-        else:
+        if not self.apps_a_lanzar:
             QMessageBox.warning(
                 self,
                 "Atención",
                 "Selecciona al menos una aplicación para lanzar.",
             )
+            return
+
+        # Deshabilitar botón para evitar doble clic y arrancar secuencia
+        self.btn_lanzar.setEnabled(False)
+        self.btn_lanzar.setText("⏳ Lanzando entorno...")
+        self.indice_lanzamiento = 0
+        self.lanzar_siguiente_app()
+
+    def lanzar_siguiente_app(self):
+        if self.indice_lanzamiento < len(self.apps_a_lanzar):
+            app_name, comando = self.apps_a_lanzar[self.indice_lanzamiento]
+            try:
+                subprocess.Popen(comando, shell=True)
+            except Exception as e:
+                QMessageBox.critical(
+                    self, "Error", f"No se pudo iniciar {app_name}:\n{e}"
+                )
+
+            self.indice_lanzamiento += 1
+            # 400ms de pausa entre app y app para evitar picos de CPU en Windows
+            QTimer.singleShot(400, self.lanzar_siguiente_app)
+        else:
+            # Terminado el escalonado, cerramos la herramienta con suavidad
+            self.close()

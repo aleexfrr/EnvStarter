@@ -45,6 +45,21 @@ def guardar_nueva_app(nombre, comando):
     with open(path, "w", encoding="utf-8") as f:
         config.write(f)
 
+def editar_app(nombre_antiguo, nuevo_nombre, nuevo_comando):
+    config = configparser.ConfigParser()
+    config.optionxform = str
+    path = obtener_ruta_ini()
+    config.read(path, encoding="utf-8")
+
+    if config.has_section("Apps"):
+        # Si cambiaron el nombre, borramos la clave antigua
+        if nombre_antiguo != nuevo_nombre and config.has_option("Apps", nombre_antiguo):
+            config.remove_option("Apps", nombre_antiguo)
+
+        config.set("Apps", nuevo_nombre, nuevo_comando)
+        with open(path, "w", encoding="utf-8") as f:
+            config.write(f)
+
 def eliminar_app(nombre):
     config = configparser.ConfigParser()
     config.optionxform = str
