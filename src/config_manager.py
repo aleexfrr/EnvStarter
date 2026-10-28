@@ -18,6 +18,7 @@ def obtener_ruta_ini():
 
 def cargar_apps():
     config = configparser.ConfigParser()
+    config.optionxform = str
     path = obtener_ruta_ini()
 
     # Si no existe el archivo .ini, lo creamos con valores por defecto
@@ -33,6 +34,7 @@ def cargar_apps():
 
 def guardar_nueva_app(nombre, comando):
     config = configparser.ConfigParser()
+    config.optionxform = str
     path = obtener_ruta_ini()
     config.read(path, encoding="utf-8")
 
@@ -45,6 +47,7 @@ def guardar_nueva_app(nombre, comando):
 
 def eliminar_app(nombre):
     config = configparser.ConfigParser()
+    config.optionxform = str
     path = obtener_ruta_ini()
     config.read(path, encoding="utf-8")
 
