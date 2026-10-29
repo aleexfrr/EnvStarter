@@ -6,14 +6,15 @@ from src.config_manager import guardar_nueva_app, editar_app
 
 
 class ConfigDialog(QDialog):
-    """Ventana flotante para añadir o editar una aplicación"""
+    """Ventana flotante para añadir o editar una aplicación en el perfil actual"""
 
-    def __init__(self, parent=None, nombre_inicial="", comando_inicial=""):
+    def __init__(self, parent=None, perfil_actual="Desarrollo", nombre_inicial="", comando_inicial=""):
         super().__init__(parent)
+        self.perfil_actual = perfil_actual
         self.es_edicion = bool(nombre_inicial)
         self.nombre_antiguo = nombre_inicial
 
-        titulo = "Editar Aplicación" if self.es_edicion else "Añadir Nueva Aplicación"
+        titulo = f"Editar en [{perfil_actual}]" if self.es_edicion else f"Añadir a [{perfil_actual}]"
         self.setWindowTitle(titulo)
         self.setFixedSize(380, 220)
         self.setModal(True)
@@ -59,7 +60,7 @@ class ConfigDialog(QDialog):
 
     def explorar_archivo(self):
         archivo, _ = QFileDialog.getOpenFileName(
-            self, "Seleccionar Ejecutable", "", "Ejecutables (*.exe);- Todos (*.*)"
+            self, "Seleccionar Ejecutable", "", "Ejecutables (*.exe);;Todos (*.*)"
         )
         if archivo:
             self.input_ruta.setText(archivo)
@@ -75,8 +76,8 @@ class ConfigDialog(QDialog):
             return
 
         if self.es_edicion:
-            editar_app(self.nombre_antiguo, nombre, comando)
+            editar_app(self.perfil_actual, self.nombre_antiguo, nombre, comando)
         else:
-            guardar_nueva_app(nombre, comando)
+            guardar_nueva_app(self.perfil_actual, nombre, comando)
 
         self.accept()
