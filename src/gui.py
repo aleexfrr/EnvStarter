@@ -5,7 +5,8 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QCheckBox, QDialog, QGroupBox, QHBoxLayout, QMainWindow,
-    QMessageBox, QPushButton, QToolBar, QVBoxLayout, QWidget,
+    QMessageBox, QPushButton, QScrollArea, QToolBar, QVBoxLayout,
+    QWidget,
 )
 from src.config_manager import cargar_apps, eliminar_app
 from src.dialog import ConfigDialog
@@ -92,10 +93,26 @@ class LanzadorApp(QMainWindow):
         self.layout_principal.setContentsMargins(20, 10, 20, 20)
         self.layout_principal.setSpacing(12)
 
-        # --- CONTENEDOR DE APLICACIONES ---
+        # --- CONTENEDOR DE APLICACIONES CON SCROLL ---
         self.group_box = QGroupBox("Aplicaciones del Entorno de Trabajo")
-        self.layout_group = QVBoxLayout(self.group_box)
+        group_layout = QVBoxLayout(self.group_box)
+        group_layout.setContentsMargins(8, 12, 8, 8)
+
+        # 1. Creamos el QScrollArea
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        # Ocultar bordes feos del scroll para que quede limpio
+        self.scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+
+        # 2. Widget contenedor interno que albergará los checkboxes dinámicos
+        self.scroll_content = QWidget()
+        self.layout_group = QVBoxLayout(self.scroll_content)
         self.layout_group.setSpacing(8)
+        self.layout_group.setContentsMargins(5, 5, 5, 5)
+
+        self.scroll_area.setWidget(self.scroll_content)
+        group_layout.addWidget(self.scroll_area)
+        
         self.layout_principal.addWidget(self.group_box)
 
         # --- BOTONES DE SELECCIÓN RÁPIDA ---
