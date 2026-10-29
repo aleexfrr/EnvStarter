@@ -6,8 +6,8 @@ from PyQt6.QtCore import Qt, QTimer, QFileInfo
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QCheckBox, QDialog, QGroupBox, QHBoxLayout, QMainWindow,
-    QMessageBox, QPushButton, QScrollArea, QToolBar, QVBoxLayout,
-    QWidget,  QFileIconProvider, QComboBox, QLabel, QInputDialog
+    QMessageBox, QPushButton, QScrollArea, QVBoxLayout, QWidget, 
+    QFileIconProvider, QComboBox, QLabel, QInputDialog
 )
 from src.config_manager import obtener_perfiles, cargar_apps, eliminar_app, crear_perfil
 from src.dialog import ConfigDialog
@@ -42,53 +42,6 @@ class LanzadorApp(QMainWindow):
         return os.path.join(base_path, "assets", "icon.ico")
 
     def _crear_interfaz(self):
-        # Barra superior con botones para añadir, borrar y editar apps
-        toolbar = QToolBar("Barra Superior", self)
-        toolbar.setMovable(False)
-        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar)
-
-        contenido_toolbar = QWidget(toolbar)
-        layout_toolbar = QHBoxLayout(contenido_toolbar)
-        layout_toolbar.setContentsMargins(0, 8, 0, 0)
-        layout_toolbar.setSpacing(6)
-
-        margen_toolbar_izquierdo = QWidget(contenido_toolbar)
-        margen_toolbar_izquierdo.setFixedWidth(15)
-        layout_toolbar.addWidget(margen_toolbar_izquierdo)
-
-        # Botón Añadir
-        btn_agregar = QPushButton(" ➕ Añadir ", self)
-        btn_agregar.setStyleSheet(
-            "font-size: 9pt; padding: 4px; border: 1px solid #c0c0c0; border-radius: 4px;"
-        )
-        btn_agregar.clicked.connect(self.abrir_dialogo_agregar)
-        layout_toolbar.addWidget(btn_agregar)
-
-        # Botón Editar
-        btn_editar = QPushButton(" ✏️ Editar ", self)
-        btn_editar.setStyleSheet(
-            "font-size: 9pt; padding: 4px; border: 1px solid #c0c0c0; border-radius: 4px;"
-        )
-        btn_editar.clicked.connect(self.abrir_dialogo_editar)
-        layout_toolbar.addWidget(btn_editar)
-
-        # Botón Borrar
-        btn_borrar = QPushButton(" 🗑️ Borrar ", self)
-        btn_borrar.setStyleSheet(
-            "font-size: 9pt; padding: 4px; border: 1px solid #c0c0c0; border-radius: 4px; color: #e84545;"
-        )
-        btn_borrar.clicked.connect(self.borrar_apps_seleccionada)
-        layout_toolbar.addWidget(btn_borrar)
-
-        margen_toolbar_derecho = QWidget(contenido_toolbar)
-        margen_toolbar_derecho.setFixedWidth(15)
-        layout_toolbar.addWidget(margen_toolbar_derecho)
-        toolbar.addWidget(contenido_toolbar)
-
-        toolbar.setStyleSheet(
-            "QToolBar { background: transparent; border: none; }"
-        )
-
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
 
@@ -96,7 +49,7 @@ class LanzadorApp(QMainWindow):
         self.layout_principal.setContentsMargins(20, 10, 20, 20)
         self.layout_principal.setSpacing(12)
 
-        # --- SELECTOR DE PERFILES ---
+        # --- 1. SELECTOR DE PERFILES ---
         layout_perfil = QHBoxLayout()
         label_perfil = QLabel("Perfil activo:")
         label_perfil.setStyleSheet("font-weight: bold; font-size: 9.5pt;")
@@ -117,7 +70,34 @@ class LanzadorApp(QMainWindow):
 
         self.layout_principal.addLayout(layout_perfil)
 
-        # --- CONTENEDOR DE APLICACIONES CON SCROLL ---
+        # --- 2. BOTONES DE ACCIÓN (Añadir, Editar, Borrar) ---
+        layout_acciones = QHBoxLayout()
+        layout_acciones.setSpacing(6)
+
+        btn_agregar = QPushButton(" ➕ Añadir ", self)
+        btn_agregar.setStyleSheet(
+            "font-size: 9pt; padding: 5px; border: 1px solid #c0c0c0; border-radius: 4px;"
+        )
+        btn_agregar.clicked.connect(self.abrir_dialogo_agregar)
+        layout_acciones.addWidget(btn_agregar)
+
+        btn_editar = QPushButton(" ✏️ Editar ", self)
+        btn_editar.setStyleSheet(
+            "font-size: 9pt; padding: 5px; border: 1px solid #c0c0c0; border-radius: 4px;"
+        )
+        btn_editar.clicked.connect(self.abrir_dialogo_editar)
+        layout_acciones.addWidget(btn_editar)
+
+        btn_borrar = QPushButton(" 🗑️ Borrar ", self)
+        btn_borrar.setStyleSheet(
+            "font-size: 9pt; padding: 5px; border: 1px solid #c0c0c0; border-radius: 4px; color: #ff4d4d;"
+        )
+        btn_borrar.clicked.connect(self.borrar_apps_seleccionada)
+        layout_acciones.addWidget(btn_borrar)
+
+        self.layout_principal.addLayout(layout_acciones)
+
+        # --- 3. CONTENEDOR DE APLICACIONES CON SCROLL ---
         self.group_box = QGroupBox("Aplicaciones del Entorno de Trabajo")
         group_layout = QVBoxLayout(self.group_box)
         group_layout.setContentsMargins(8, 12, 8, 8)
@@ -125,7 +105,6 @@ class LanzadorApp(QMainWindow):
         # 1. Creamos el QScrollArea
         self.scroll_area = QScrollArea(self)
         self.scroll_area.setWidgetResizable(True)
-        # Ocultar bordes feos del scroll para que quede limpio
         self.scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
 
         # 2. Widget contenedor interno que albergará los checkboxes dinámicos
@@ -139,7 +118,7 @@ class LanzadorApp(QMainWindow):
         
         self.layout_principal.addWidget(self.group_box)
 
-        # --- BOTONES DE SELECCIÓN RÁPIDA ---
+        # --- 4. BOTONES DE SELECCIÓN RÁPIDA ---
         layout_botones_sel = QHBoxLayout()
         self.btn_todos = QPushButton("Marcar todo", self)
         self.btn_todos.clicked.connect(self.seleccionar_todo)
@@ -151,7 +130,7 @@ class LanzadorApp(QMainWindow):
         layout_botones_sel.addWidget(self.btn_ninguno)
         self.layout_principal.addLayout(layout_botones_sel)
 
-        # --- BOTÓN PRINCIPAL DE LANZAMIENTO ---
+        # --- 5. BOTÓN PRINCIPAL DE LANZAMIENTO ---
         self.btn_lanzar = QPushButton("🚀 Lanzar Seleccionadas", self)
         self.btn_lanzar.setStyleSheet("""
             QPushButton {
@@ -245,10 +224,10 @@ class LanzadorApp(QMainWindow):
 
         # --- ALTURA DINÁMICA INTELIGENTE ---
         num_apps = len(self.apps_dict)
-        # Calculamos la altura base de los botones y márgenes (~200px) + espacio por cada app (~36px)
-        altura_calculada = 210 + (num_apps * 36)
+        # 280px para los elementos fijos (perfiles, botones, márgenes) + ~32px por cada app
+        altura_calculada = 280 + (num_apps * 32)
         
-        # Limitamos la altura: mínimo 360px para que no se vea aplastado, máximo 520px (si pasa de ahí, aparece el scroll)
+        # Mínimo 360px para listas pequeñas, máximo 520px
         altura_final = max(360, min(altura_calculada, 520))
         
         # Ajustamos el tamaño de la ventana al vuelo
