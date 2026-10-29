@@ -1,14 +1,15 @@
 import os
 import sys
+import shutil
 import subprocess
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QFileInfo
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QCheckBox, QDialog, QGroupBox, QHBoxLayout, QMainWindow,
     QMessageBox, QPushButton, QScrollArea, QToolBar, QVBoxLayout,
-    QWidget,
+    QWidget,  QFileIconProvider, QComboBox, QLabel, QInputDialog
 )
-from src.config_manager import cargar_apps, eliminar_app
+from src.config_manager import obtener_perfiles, cargar_apps, eliminar_app, crear_perfil
 from src.dialog import ConfigDialog
 
 
@@ -18,7 +19,9 @@ class LanzadorApp(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("EnvStarter - Panel de Control")
-        self.setFixedSize(420, 520)
+        # Ancho fijo
+        self.setMinimumWidth(420)
+        self.setMaximumWidth(420)
 
         icon_path = self._obtener_ruta_icono()
         if os.path.exists(icon_path):
@@ -27,7 +30,7 @@ class LanzadorApp(QMainWindow):
         self.vars_apps = {}
         self.apps_dict = {}
         self._crear_interfaz()
-        self.cargar_lista_apps()
+        self.cargar_perfiles()
 
     def _obtener_ruta_icono(self):
         if getattr(sys, "frozen", False):
@@ -93,6 +96,27 @@ class LanzadorApp(QMainWindow):
         self.layout_principal.setContentsMargins(20, 10, 20, 20)
         self.layout_principal.setSpacing(12)
 
+        # --- SELECTOR DE PERFILES ---
+        layout_perfil = QHBoxLayout()
+        label_perfil = QLabel("Perfil activo:")
+        label_perfil.setStyleSheet("font-weight: bold; font-size: 9.5pt;")
+        layout_perfil.addWidget(label_perfil)
+
+        self.combo_perfiles = QComboBox(self)
+        self.combo_perfiles.setStyleSheet("padding: 4px; font-size: 9.5pt;")
+        self.combo_perfiles.currentIndexChanged.connect(self.cambiar_perfil)
+        layout_perfil.addWidget(self.combo_perfiles)
+
+        # Botón para añadir un nuevo perfil rápidamente
+        btn_nuevo_perfil = QPushButton("➕", self)
+        btn_nuevo_perfil.setFixedWidth(32)
+        btn_nuevo_perfil.setToolTip("Crear nuevo perfil")
+        btn_nuevo_perfil.setStyleSheet("font-size: 9pt; padding: 4px;")
+        btn_nuevo_perfil.clicked.connect(self.dialogo_crear_perfil)
+        layout_perfil.addWidget(btn_nuevo_perfil)
+
+        self.layout_principal.addLayout(layout_perfil)
+
         # --- CONTENEDOR DE APLICACIONES CON SCROLL ---
         self.group_box = QGroupBox("Aplicaciones del Entorno de Trabajo")
         group_layout = QVBoxLayout(self.group_box)
@@ -147,6 +171,55 @@ class LanzadorApp(QMainWindow):
         self.btn_lanzar.clicked.connect(self.lanzar_apps)
         self.layout_principal.addWidget(self.btn_lanzar)
 
+    def cargar_perfiles(self):
+        self.combo_perfiles.blockSignals(True)
+        self.combo_perfiles.clear()
+        perfiles = obtener_perfiles()
+        self.combo_perfiles.addItems(perfiles)
+        self.combo_perfiles.blockSignals(False)
+        
+        if perfiles:
+            self.cargar_lista_apps()
+
+    def cambiar_perfil(self):
+        self.cargar_lista_apps()
+
+    def dialogo_crear_perfil(self):
+        nombre, ok = QInputDialog.getText(
+            self, "Nuevo Perfil", "Introduce el nombre del nuevo perfil (ej: Oficina, Redes):"
+        )
+        if ok and nombre.strip():
+            nombre_limpio = nombre.strip()
+            perfiles_actuales = obtener_perfiles()
+            
+            if nombre_limpio in perfiles_actuales:
+                QMessageBox.warning(self, "Atención", f"El perfil '{nombre_limpio}' ya existe.")
+                return
+
+            crear_perfil(nombre_limpio)
+            self.cargar_perfiles()
+            
+            # Seleccionar automáticamente el perfil recién creado
+            index = self.combo_perfiles.findText(nombre_limpio)
+            if index >= 0:
+                self.combo_perfiles.setCurrentIndex(index)
+                
+            QMessageBox.information(
+                self, "Éxito", f"Perfil '{nombre_limpio}' creado correctamente."
+            )
+
+    def obtener_icono_app(self, comando):
+        """Extrae el icono real del ejecutable mediante la API de Windows / QFileIconProvider"""
+        cmd_limpio = comando.strip('"\'')
+        # Si es un comando del sistema como 'code' o 'wt', buscamos su ruta absoluta en PATH
+        ruta_real = shutil.which(cmd_limpio) or cmd_limpio
+        
+        if os.path.exists(ruta_real):
+            file_info = QFileInfo(ruta_real)
+            provider = QFileIconProvider()
+            return provider.icon(file_info)
+        return QIcon()  # Icono vacío por defecto si no se encuentra archivo físico
+
     def cargar_lista_apps(self):
         # Limpiar checkboxes anteriores
         for i in reversed(range(self.layout_group.count())):
@@ -155,22 +228,41 @@ class LanzadorApp(QMainWindow):
                 widget.setParent(None)
 
         self.vars_apps.clear()
-        self.apps_dict = cargar_apps()
+        perfil_actual = self.combo_perfiles.currentText()
+        self.apps_dict = cargar_apps(perfil_actual)
 
-        for app_name in self.apps_dict.keys():
+        for app_name, comando in self.apps_dict.items():
             chk = QCheckBox(app_name, self)
             chk.setChecked(True)
+            
+            # Asignar el icono real del ejecutable al checkbox
+            icono = self.obtener_icono_app(comando)
+            if not icono.isNull():
+                chk.setIcon(icono)
+
             self.layout_group.addWidget(chk)
             self.vars_apps[app_name] = chk
 
+        # --- ALTURA DINÁMICA INTELIGENTE ---
+        num_apps = len(self.apps_dict)
+        # Calculamos la altura base de los botones y márgenes (~200px) + espacio por cada app (~36px)
+        altura_calculada = 210 + (num_apps * 36)
+        
+        # Limitamos la altura: mínimo 360px para que no se vea aplastado, máximo 520px (si pasa de ahí, aparece el scroll)
+        altura_final = max(360, min(altura_calculada, 520))
+        
+        # Ajustamos el tamaño de la ventana al vuelo
+        self.resize(420, altura_final)
+
     def abrir_dialogo_agregar(self):
-        dialogo = ConfigDialog(self)
+        perfil_actual = self.combo_perfiles.currentText()
+        dialogo = ConfigDialog(self, perfil_actual=perfil_actual)
         if dialogo.exec() == QDialog.DialogCode.Accepted:
             self.cargar_lista_apps()
             QMessageBox.information(
                 self,
                 "Éxito",
-                "Aplicación añadida correctamente al archivo .ini",
+                f"Aplicación añadida correctamente al perfil [{perfil_actual}].",
             )
 
     def abrir_dialogo_editar(self):
@@ -193,9 +285,14 @@ class LanzadorApp(QMainWindow):
 
         app_name = apps_marcadas[0]
         comando_actual = self.apps_dict[app_name]
+        perfil_actual = self.combo_perfiles.currentText()
 
-        # Abrir diálogo pasando los datos actuales
-        dialogo = ConfigDialog(self, nombre_inicial=app_name, comando_inicial=comando_actual)
+        dialogo = ConfigDialog(
+            self, 
+            perfil_actual=perfil_actual, 
+            nombre_inicial=app_name, 
+            comando_inicial=comando_actual
+        )
         if dialogo.exec() == QDialog.DialogCode.Accepted:
             self.cargar_lista_apps()
             QMessageBox.information(
@@ -234,9 +331,9 @@ class LanzadorApp(QMainWindow):
         )
 
         if confirm == QMessageBox.StandardButton.Yes:
+            perfil_actual = self.combo_perfiles.currentText()
             for app_name in apps_marcadas:
-                eliminar_app(app_name)
-            
+                eliminar_app(perfil_actual, app_name)
             self.cargar_lista_apps()
             QMessageBox.information(
                 self,
