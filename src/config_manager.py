@@ -2,6 +2,7 @@ import configparser
 import os
 import sys
 from src.config import DESARROLLO, AUTOMATIZACION, COMUNICACION
+from src.logger import registrar_error
 
 
 def obtener_ruta_ini():
@@ -21,15 +22,24 @@ def obtener_configuracion():
 
     # Si no existe el archivo .ini, lo creamos con valores por defecto
     if not os.path.exists(path):
-        user_home = os.path.expanduser("~")
-        # Creamos perfiles por defecto estructurados por secciones
-        config["Desarrollo"] = DESARROLLO
-        config["Automatización"] = AUTOMATIZACION
-        config["Comunicación"] = COMUNICACION
-        with open(path, "w", encoding="utf-8") as f:
-            config.write(f)
+        try:
+            config["Desarrollo"] = DESARROLLO
+            config["Automatización"] = AUTOMATIZACION
+            config["Comunicación"] = COMUNICACION
+            with open(path, "w", encoding="utf-8") as f:
+                config.write(f)
+        except Exception as e:
+            registrar_error(f"No se pudo crear el archivo 'apps.ini' por defecto: {e}")
+            return config
 
-    config.read(path, encoding="utf-8")
+    # Intentamos leer y parsear el archivo con control de excepciones
+    try:
+        config.read(path, encoding="utf-8")
+    except configparser.Error as e:
+        registrar_error(f"Error de sintaxis o formato en el archivo 'apps.ini': {e}")
+    except Exception as e:
+        registrar_error(f"Error inesperado al leer el archivo 'apps.ini': {e}")
+
     return config
 
 
@@ -55,8 +65,11 @@ def guardar_nueva_app(perfil, nombre, comando):
     
     config.set(perfil, nombre, comando)
     path = obtener_ruta_ini()
-    with open(path, "w", encoding="utf-8") as f:
-        config.write(f)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            config.write(f)
+    except Exception as e:
+        registrar_error(f"Error al guardar nueva aplicación en 'apps.ini': {e}")
 
 
 def editar_app(perfil, nombre_antiguo, nuevo_nombre, nuevo_comando):
@@ -67,8 +80,11 @@ def editar_app(perfil, nombre_antiguo, nuevo_nombre, nuevo_comando):
         
         config.set(perfil, nuevo_nombre, nuevo_comando)
         path = obtener_ruta_ini()
-        with open(path, "w", encoding="utf-8") as f:
-            config.write(f)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                config.write(f)
+        except Exception as e:
+            registrar_error(f"Error al editar aplicación en 'apps.ini': {e}")
 
 
 def eliminar_app(perfil, nombre):
@@ -76,13 +92,20 @@ def eliminar_app(perfil, nombre):
     if config.has_section(perfil) and config.has_option(perfil, nombre):
         config.remove_option(perfil, nombre)
         path = obtener_ruta_ini()
-        with open(path, "w", encoding="utf-8") as f:
-            config.write(f)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                config.write(f)
+        except Exception as e:
+            registrar_error(f"Error al eliminar aplicación en 'apps.ini': {e}")
+
 
 def crear_perfil(nombre_perfil):
     config = obtener_configuracion()
     if not config.has_section(nombre_perfil):
         config.add_section(nombre_perfil)
         path = obtener_ruta_ini()
-        with open(path, "w", encoding="utf-8") as f:
-            config.write(f)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                config.write(f)
+        except Exception as e:
+            registrar_error(f"Error al crear el perfil '{nombre_perfil}' en 'apps.ini': {e}")

@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 )
 from src.config_manager import obtener_perfiles, cargar_apps, eliminar_app, crear_perfil
 from src.dialog import ConfigDialog
+from src.logger import registrar_error, registrar_fallo_lanzamiento
 
 
 class LanzadorApp(QMainWindow):
@@ -329,7 +330,7 @@ class LanzadorApp(QMainWindow):
             chk.setChecked(False)
 
     def lanzar_apps(self):
-        # Recopilar apps marcadas
+        perfil_actual = self.combo_perfiles.currentText()
         self.apps_a_lanzar = [
             (name, self.apps_dict[name])
             for name, chk in self.vars_apps.items() if chk.isChecked()
@@ -343,7 +344,9 @@ class LanzadorApp(QMainWindow):
             )
             return
 
-        # Deshabilitar botón para evitar doble clic y arrancar secuencia
+        # Guardamos el perfil actual por si ocurre algún fallo durante la secuencia
+        self.perfil_lanzamiento = perfil_actual
+
         self.btn_lanzar.setEnabled(False)
         self.btn_lanzar.setText("⏳ Lanzando entorno...")
         self.indice_lanzamiento = 0
@@ -355,6 +358,11 @@ class LanzadorApp(QMainWindow):
             try:
                 subprocess.Popen(comando, shell=True)
             except Exception as e:
+                error_msg = f"No se pudo iniciar '{app_name}' con comando '{comando}': {e}"
+                
+                # Si falla, registramos el contexto completo y el error
+                registrar_fallo_lanzamiento(self.perfil_lanzamiento, self.apps_a_lanzar, error_msg)
+                
                 QMessageBox.critical(
                     self, "Error", f"No se pudo iniciar {app_name}:\n{e}"
                 )
