@@ -29,7 +29,21 @@ python -m pip install --upgrade pip >nul
 pip install -r requirements.txt || exit /b 1
 
 echo [4/4] Compilando ejecutable con Nuitka...
-python -m nuitka --standalone --onefile --windows-console-mode=disable --enable-plugin=pyqt6 --include-data-dir=assets=assets --windows-icon-from-ico=assets/icon.ico --output-filename=EnvStarter.exe --output-dir=dist main.py
+python -m nuitka ^
+    --standalone ^
+    --onefile ^
+    --windows-console-mode=disable ^
+    --enable-plugin=pyqt6 ^
+    --include-data-dir=assets=assets ^
+    --windows-icon-from-ico=assets/icon.ico ^
+    --file-description="Environment Starter" ^
+    --product-name="EnvStarter" ^
+    --file-version=1.7.0.0 ^
+    --product-version=1.7.0.0 ^
+    --copyright="Copyright © 2026 RANDIS" ^
+    --output-filename=EnvStarter.exe ^
+    --output-dir=dist ^
+    main.py
 
 if errorlevel 1 (
     echo [ERROR] Fallo en la compilacion con Nuitka.
