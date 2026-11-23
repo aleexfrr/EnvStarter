@@ -28,20 +28,13 @@ echo [3/4] Instalando / Actualizando dependencias...
 python -m pip install --upgrade pip >nul
 pip install -r requirements.txt || exit /b 1
 
-echo [4/4] Compilando ejecutable con PyInstaller...
-pyinstaller --noconsole ^
-    --onefile ^
-    --clean ^
-    --noconfirm ^
-    --icon=assets/icon.ico ^
-    --add-data "assets;assets" ^
-    --name="EnvStarter" ^
-    --distpath dist ^
-    --workpath build ^
-    --exclude-module tkinter ^
-    --exclude-module unittest ^
-    --exclude-module pydoc ^
-    main.py || exit /b 1
+echo [4/4] Compilando ejecutable con Nuitka...
+python -m nuitka --standalone --onefile --windows-console-mode=disable --enable-plugin=pyqt6 --include-data-dir=assets=assets --windows-icon-from-ico=assets/icon.ico --output-filename=EnvStarter.exe --output-dir=dist main.py
+
+if errorlevel 1 (
+    echo [ERROR] Fallo en la compilacion con Nuitka.
+    exit /b 1
+)
 
 call deactivate
 
