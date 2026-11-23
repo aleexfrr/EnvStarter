@@ -1,18 +1,16 @@
 import configparser
 import os
-import sys
-from src.config import DESARROLLO, AUTOMATIZACION, COMUNICACION
 from src.logger import registrar_error
 
 
 def obtener_ruta_ini():
-    if getattr(sys, "frozen", False):
-        base_dir = os.path.dirname(sys.executable)
-    else:
-        base_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..")
-        )
-    return os.path.join(base_dir, "apps.ini")
+    local_appdata = os.environ.get("LOCALAPPDATA")
+    if not local_appdata:
+        local_appdata = os.path.join(os.path.expanduser("~"), "AppData", "Local")
+
+    data_folder = os.path.join(local_appdata, "EnvStarter")
+    os.makedirs(data_folder, exist_ok=True)
+    return os.path.join(data_folder, "apps.ini")
 
 
 def obtener_configuracion():
@@ -23,13 +21,10 @@ def obtener_configuracion():
     # Si no existe el archivo .ini, lo creamos con valores por defecto
     if not os.path.exists(path):
         try:
-            config["Desarrollo"] = DESARROLLO
-            config["Automatización"] = AUTOMATIZACION
-            config["Comunicación"] = COMUNICACION
             with open(path, "w", encoding="utf-8") as f:
                 config.write(f)
         except Exception as e:
-            registrar_error(f"No se pudo crear el archivo 'apps.ini' por defecto: {e}")
+            registrar_error(f"No se pudo crear el archivo 'apps.ini' vacio: {e}")
             return config
 
     # Intentamos leer y parsear el archivo con control de excepciones
@@ -47,7 +42,7 @@ def obtener_perfiles():
     config = obtener_configuracion()
     perfiles = config.sections()
     if not perfiles:
-        perfiles = ["Desarrollo"]
+        perfiles = ["General"]
     return perfiles
 
 

@@ -201,9 +201,10 @@ class LanzadorApp(QMainWindow):
         return QIcon()  # Icono vacío por defecto si no se encuentra archivo físico
 
     def cargar_lista_apps(self):
-        # Limpiar checkboxes anteriores
+        # Limpiar widgets anteriores del contenedor de apps
         for i in reversed(range(self.layout_group.count())):
-            widget = self.layout_group.itemAt(i).widget()
+            item = self.layout_group.itemAt(i)
+            widget = item.widget() if item else None
             if widget:
                 widget.setParent(None)
 
@@ -211,27 +212,37 @@ class LanzadorApp(QMainWindow):
         perfil_actual = self.combo_perfiles.currentText()
         self.apps_dict = cargar_apps(perfil_actual)
 
-        for app_name, comando in self.apps_dict.items():
-            chk = QCheckBox(app_name, self)
-            chk.setChecked(True)
-            
-            # Asignar el icono real del ejecutable al checkbox
-            icono = self.obtener_icono_app(comando)
-            if not icono.isNull():
-                chk.setIcon(icono)
+        if not self.apps_dict:
+            self.layout_group.addStretch()
+            lbl_vacio = QLabel("Aún no tienes apps agregadas", self.scroll_content)
+            lbl_vacio.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl_vacio.setStyleSheet("color: #777777; font-style: italic; font-size: 9.5pt;")
+            self.layout_group.addWidget(lbl_vacio)
+            self.layout_group.addStretch()
 
-            self.layout_group.addWidget(chk)
-            self.vars_apps[app_name] = chk
+            self.btn_todos.setEnabled(False)
+            self.btn_ninguno.setEnabled(False)
+            self.btn_lanzar.setEnabled(False)
+        else:
+            self.btn_todos.setEnabled(True)
+            self.btn_ninguno.setEnabled(True)
+            self.btn_lanzar.setEnabled(True)
+
+            for app_name, comando in self.apps_dict.items():
+                chk = QCheckBox(app_name, self)
+                chk.setChecked(True)
+
+                icono = self.obtener_icono_app(comando)
+                if not icono.isNull():
+                    chk.setIcon(icono)
+
+                self.layout_group.addWidget(chk)
+                self.vars_apps[app_name] = chk
 
         # --- ALTURA DINÁMICA INTELIGENTE ---
         num_apps = len(self.apps_dict)
-        # 280px para los elementos fijos (perfiles, botones, márgenes) + ~32px por cada app
         altura_calculada = 280 + (num_apps * 32)
-        
-        # Mínimo 360px para listas pequeñas, máximo 520px
         altura_final = max(360, min(altura_calculada, 520))
-        
-        # Ajustamos el tamaño de la ventana al vuelo
         self.resize(420, altura_final)
 
     def abrir_dialogo_agregar(self):
